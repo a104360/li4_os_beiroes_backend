@@ -1,0 +1,30 @@
+name: Beiroes CI/CD Pipeline
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Backend Tests
+        run: |
+          cd backend
+          pytest --maxfail=1 --disable-warnings
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: self-hosted # O Raspberry Pi atua como Runner
+    steps:
+      - name: Pull latest code
+        run: git pull origin main
+      - name: Restart Services
+        run: docker-compose -f docker-compose.prod.yml up -d --build
+
