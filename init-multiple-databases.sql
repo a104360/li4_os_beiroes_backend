@@ -1,0 +1,1 @@
+CREATE DATABSE beiroes_test;
