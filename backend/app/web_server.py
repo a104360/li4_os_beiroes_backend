@@ -4,6 +4,7 @@ from flask_cors import CORS
 from logic.beiroes_facade import BeiroesLNFacade
 from utils.ui import UI
 import os
+from datetime import datetime
 
 class WebServer:
     def __init__(self, db_config: dict):
@@ -101,6 +102,36 @@ class WebServer:
                 return jsonify({"message": "Resposta registada com sucesso"}), 200
             except (ValueError, KeyError) as e:
                 return jsonify({"error": str(e)}), 400
+            
+
+        @self.app.route('/eventos', methods=['GET'])
+        def listar_eventos():
+            """
+            GET /eventos?ano=2026&mes=5
+            """
+            try:
+                ano = int(request.args.get('ano', datetime.now().year))
+                mes = int(request.args.get('mes', datetime.now().month))
+                
+                eventos = self.ln.listar_eventos_por_mes(ano, mes)
+                
+                # Serialization helper to convert objects to dicts
+                output = []
+                for e in eventos:
+                    e_dict = e.__dict__.copy()
+                    e_dict['id'] = str(e.id)
+                    e_dict['data_hora'] = e.data_hora.isoformat()
+                    e_dict['tipo'] = type(e).__name__
+                    
+                    # Handle specific Jogo/Treino nested data if necessary
+                    if hasattr(e, 'convocatoria'):
+                        e_dict['id_convocatoria'] = str(e.convocatoria.uuid)
+                    
+                    output.append(e_dict)
+                
+                return jsonify(output), 200
+            except ValueError:
+                return jsonify({"error": "Invalid year or month format"}), 400
 
         # --- Logística (Boleias) ---
         @self.app.route('/boleias', methods=['POST'])

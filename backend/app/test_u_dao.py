@@ -1,15 +1,18 @@
+import os
+from dotenv import load_dotenv
 from data.utilizador_dao import UtilizadorDAO
 from logic.ss_gestao.utilizador import Utilizador,Jogador,Presidente,Treinador
 from datetime import date
 
 
 if __name__ == "__main__":
+    load_dotenv()
     # 1. Configuration
     config = {
-        "host": "localhost",
-        "database": "caderno_quim",
-        "user": "beiroes_admin",
-        "password": "%2*j5p5BRp5kQ%",
+        "host": os.getenv("DB_HOST","localhost"),
+        "database": os.getenv("DB_NAME","caderno_quim"),
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
         "port": 5432
     }
 

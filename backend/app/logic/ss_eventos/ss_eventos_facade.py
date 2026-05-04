@@ -83,6 +83,15 @@ class SSEventosFacade():
         """Returns events for a specific day (YYYY-MM-DD)"""
         alvo = datetime.fromisoformat(data_alvo).date()
         return [e for e in self.eventos.values() if e.data_hora.date() == alvo]
+    
+    def listar_eventos_por_mes(self, ano: int, mes: int) -> list[Evento]:
+        """
+        Returns all events (Games and Training) for a specific month and year.
+        """
+        return [
+            e for e in self.eventos.values() 
+            if e.data_hora.year == ano and e.data_hora.month == mes
+        ]
 
     # --- Logistics & Attendance ---
 

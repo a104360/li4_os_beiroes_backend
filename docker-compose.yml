@@ -18,17 +18,20 @@ services:
     volumes:
       - ./pgdata:/var/lib/postgresql/data
 
-  # api:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: ./backend/Dockerfile
-  #   container_name: beiroes_api
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy # Waits for DB to be ready to accept connections
-  #   environment:
-  #     DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
-  #     FLASK_APP: ./backend/app/test_u_dao.py # Ensure this points to your entry file
-  #     FLASK_ENV: development
-  #   ports:
-  #     - "5000:5000"
+  api:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: beiroes_api
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "8080:8080"     

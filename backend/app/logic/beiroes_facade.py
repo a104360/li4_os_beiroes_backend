@@ -53,6 +53,9 @@ class BeiroesLNFacade():
     
     def procurar_eventos_na_data(self, data_alvo: str) -> list[Evento]:
         return self.eventos.procurar_eventos_na_data(data_alvo)
+        
+    def listar_eventos_por_mes(self, ano: int, mes: int) -> list[Evento]:
+        return self.eventos.listar_eventos_por_mes(ano, mes)
     
     def efetuar_convocatoria(self, jogo_id: str, lista_jogadores_ids: list[str]):
         self.eventos.efetuar_convocatoria(jogo_id, lista_jogadores_ids)
