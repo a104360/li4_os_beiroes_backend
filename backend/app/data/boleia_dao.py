@@ -189,3 +189,27 @@ class BoleiaDAO(AbstractDAO[Boleia]):
         except Exception as e:
             self.connection.rollback()
             raise RuntimeError(f"Error in batch viatura persistence: {e}")
+        
+    def clear_viaturas(self):
+        """Removes all records from the viaturas table."""
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute("DELETE FROM viaturas WHERE TRUE")
+            self.connection.commit()
+        except psycopg2.Error as e:
+            self.connection.rollback()
+            raise RuntimeError(f"Failed to clear viaturas: {e}")
+
+    def clear(self):
+        """Overriding clear to ensure correct order of deletion within this DAO."""
+        # 1. Clear junction table and rides first
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute("DELETE FROM boleia_passageiros WHERE TRUE")
+                cursor.execute("DELETE FROM boleias WHERE TRUE")
+                # 2. Clear viaturas
+                cursor.execute("DELETE FROM viaturas WHERE TRUE")
+            self.connection.commit()
+        except psycopg2.Error as e:
+            self.connection.rollback()
+            raise RuntimeError(f"Failed to clear logistics data: {e}")
