@@ -1,0 +1,34 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    container_name: beiroes_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+
+  # api:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: ./backend/Dockerfile
+  #   container_name: beiroes_api
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy # Waits for DB to be ready to accept connections
+  #   environment:
+  #     DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+  #     FLASK_APP: ./backend/app/test_u_dao.py # Ensure this points to your entry file
+  #     FLASK_ENV: development
+  #   ports:
+  #     - "5000:5000"
