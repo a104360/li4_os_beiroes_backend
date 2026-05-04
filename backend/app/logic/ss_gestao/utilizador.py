@@ -13,8 +13,8 @@ class Utilizador:
     nome_emergencia:str
     contacto_emergencia:str
 
-    def validar_password(self,password_hash:bytes) -> bool:
-        pass
+    # def validar_password(self,password_hash:bytes) -> bool:
+    #     pass
 
 @dataclass
 class Jogador(Utilizador):

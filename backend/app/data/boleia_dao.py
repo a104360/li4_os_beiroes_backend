@@ -1,0 +1,191 @@
+import psycopg2
+from psycopg2 import sql
+from uuid import UUID
+from datetime import datetime
+from typing import Optional, Dict
+
+from data.abstract_dao import AbstractDAO
+
+from logic.ss_eventos.evento import Jogo
+from logic.ss_gestao.utilizador import Utilizador
+from logic.ss_logistica.boleia import Viatura, Boleia 
+
+class BoleiaDAO(AbstractDAO[Boleia]):
+    def __init__(self, db_config: dict):
+        super().__init__("boleias", "id", db_config)
+        self._create_table_if_not_exists()
+
+    def _create_table_if_not_exists(self):
+        queries = [
+            """CREATE TABLE IF NOT EXISTS viaturas (
+                id UUID PRIMARY KEY,
+                modelo VARCHAR(100) NOT NULL,
+                matricula VARCHAR(20) UNIQUE NOT NULL,
+                lugares_totais INTEGER NOT NULL,
+                id_proprietario VARCHAR(50) REFERENCES utilizadores(id)
+            );""",
+            """CREATE TABLE IF NOT EXISTS boleias (
+                id UUID PRIMARY KEY,
+                partida TIMESTAMP WITH TIME ZONE NOT NULL,
+                lugares_vagos INTEGER NOT NULL,
+                max_lugares INTEGER NOT NULL,
+                id_viatura UUID REFERENCES viaturas(id),
+                id_jogo UUID REFERENCES eventos(id) ON DELETE CASCADE
+            );""",
+            """CREATE TABLE IF NOT EXISTS boleia_passageiros (
+                id_boleia UUID REFERENCES boleias(id) ON DELETE CASCADE,
+                id_utilizador VARCHAR(50) REFERENCES utilizadores(id) ON DELETE CASCADE,
+                PRIMARY KEY (id_boleia, id_utilizador)
+            );"""
+        ]
+        try:
+            with self.connection.cursor() as cursor:
+                for q in queries:
+                    cursor.execute(q)
+            self.connection.commit()
+        except psycopg2.Error as e:
+            self.connection.rollback()
+            raise RuntimeError(f"Failed to initialize logistica tables: {e}")
+
+    # --- Memory Loading Method ---
+
+    def load_viaturas_to_memory(self) -> Dict[str, Viatura]:
+        """Loads all Viaturas into a dictionary keyed by their ID string."""
+        viaturas = {}
+        query = """
+            SELECT v.*, u.id FROM viaturas v 
+            JOIN utilizadores u ON v.id_proprietario = u.id
+        """
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute(query)
+                for row in cursor.fetchall():
+                    # Note: This assumes you have a way to reconstruct the owner Utilizador
+                    # For simplicity, we create a placeholder Utilizador with just the ID
+                    owner = Utilizador(id=row[4], nome="", contacto="", password=b"", 
+                                      ativo=True, data_nascimento=None, 
+                                      nome_emergencia="", contacto_emergencia="")
+                    v = Viatura(id=row[0], modelo=row[1], matricula=row[2], 
+                                lugares_totais=row[3], proprietario=owner)
+                    viaturas[str(v.id)] = v
+        except psycopg2.Error as e:
+            raise RuntimeError(f"Error loading viaturas: {e}")
+        return viaturas
+
+    # --- Standard DAO Methods ---
+
+    def put(self, key: str, value: Boleia) -> Optional[Boleia]:
+        old_value = self.get(key)
+        try:
+            with self.connection.cursor() as cursor:
+                # 1. Ensure Viatura exists
+                cursor.execute("""
+                    INSERT INTO viaturas (id, modelo, matricula, lugares_totais, id_proprietario)
+                    VALUES (%s, %s, %s, %s, %s) ON CONFLICT (id) DO NOTHING
+                """, (str(value.viatura.id), value.viatura.modelo, value.viatura.matricula, 
+                      value.viatura.lugares_totais, value.viatura.proprietario.id))
+
+                # 2. Upsert Boleia
+                cursor.execute("""
+                    INSERT INTO boleias (id, partida, lugares_vagos, max_lugares, id_viatura, id_jogo)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        partida=EXCLUDED.partida, lugares_vagos=EXCLUDED.lugares_vagos,
+                        max_lugares=EXCLUDED.max_lugares, id_viatura=EXCLUDED.id_viatura
+                """, (str(value.id), value.partida, value.lugares_vagos, value.max_lugares, 
+                      str(value.viatura.id), str(value.jogo.id)))
+
+                # 3. Sync Passengers (Delete and Re-insert current set)
+                cursor.execute("DELETE FROM boleia_passageiros WHERE id_boleia = %s", (str(value.id),))
+                for passageiro in value.passageiros:
+                    cursor.execute("""
+                        INSERT INTO boleia_passageiros (id_boleia, id_utilizador) 
+                        VALUES (%s, %s)
+                    """, (str(value.id), passageiro.id))
+
+            self.connection.commit()
+        except psycopg2.Error as e:
+            self.connection.rollback()
+            raise RuntimeError(e)
+        return old_value
+
+    def get(self, key: str) -> Optional[Boleia]:
+        query = """
+            SELECT b.*, v.modelo, v.matricula, v.lugares_totais, v.id_proprietario
+            FROM boleias b
+            JOIN viaturas v ON b.id_viatura = v.id
+            WHERE b.id = %s
+        """
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute(query, (key,))
+                row = cursor.fetchone()
+                if not row: return None
+                
+                # Fetch Passengers
+                cursor.execute("SELECT id_utilizador FROM boleia_passageiros WHERE id_boleia = %s", (key,))
+                passengers = [Utilizador(id=r[0], nome="", contacto="", password=b"", 
+                                         ativo=True, data_nascimento=None, 
+                                         nome_emergencia="", contacto_emergencia="") 
+                              for r in cursor.fetchall()]
+                
+                return self._decode_tuple(row, passengers)
+        except psycopg2.Error as e:
+            raise RuntimeError(e)
+
+    def _decode_tuple(self, record, passengers=None) -> Optional[Boleia]:
+        # record mapping: 0:id, 1:partida, 2:lugares_vagos, 3:max_lugares, 4:id_viatura, 5:id_jogo, 
+        # 6:v_modelo, 7:v_matricula, 8:v_lugares, 9:v_prop_id
+        
+        viatura = Viatura(
+            id=record[4], modelo=record[6], matricula=record[7], 
+            lugares_totais=record[8], proprietario=Utilizador(id=record[9], nome="", contacto="", password=b"", 
+                                                            ativo=True, data_nascimento=None, 
+                                                            nome_emergencia="", contacto_emergencia="")
+        )
+        
+        return Boleia(
+            id=record[0], partida=record[1], lugares_vagos=record[2], 
+            max_lugares=record[3], viatura=viatura, 
+            passageiros=passengers or [], 
+            jogo=Jogo(id=record[5], data_hora=None, local="", estado="", adversario="", golos_favor=0, golos_contra=0, convocatoria=None)
+        )
+
+    def containsValue(self, value: object) -> bool:
+        return isinstance(value, Boleia) and value.id in self
+    
+    def put_viatura(self, viatura: Viatura):
+        """Inserts or updates a single Viatura in the database."""
+        query = """
+            INSERT INTO viaturas (id, modelo, matricula, lugares_totais, id_proprietario)
+            VALUES (%s, %s, %s, %s, %s)
+            ON CONFLICT (id) DO UPDATE SET
+                modelo = EXCLUDED.modelo,
+                matricula = EXCLUDED.matricula,
+                lugares_totais = EXCLUDED.lugares_totais,
+                id_proprietario = EXCLUDED.id_proprietario
+        """
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute(query, (
+                    str(viatura.id), 
+                    viatura.modelo, 
+                    viatura.matricula, 
+                    viatura.lugares_totais, 
+                    viatura.proprietario.id
+                ))
+            self.connection.commit()
+        except psycopg2.Error as e:
+            self.connection.rollback()
+            raise RuntimeError(f"Error persisting viatura: {e}")
+
+    def put_all_viaturas(self, viaturas: Dict[str, Viatura]):
+        """Persists a dictionary of Viaturas to the database in a single transaction."""
+        try:
+            # We use the existing connection to wrap everything in one transaction
+            for v_id, viatura in viaturas.items():
+                self.put_viatura(viatura)
+            self.connection.commit()
+        except Exception as e:
+            self.connection.rollback()
+            raise RuntimeError(f"Error in batch viatura persistence: {e}")
