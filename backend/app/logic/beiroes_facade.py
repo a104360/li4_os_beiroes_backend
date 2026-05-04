@@ -59,6 +59,9 @@ class BeiroesLNFacade():
     
     def registar_presencas(self, treino_id: str, presencas_data: dict[str, dict]):
         self.eventos.registar_presencas(treino_id, presencas_data)
+
+    def registar_resposta_convocatoria(self, jogo_id: str, jogador_id: str, resposta: bool):
+        self.eventos.registar_resposta_convocatoria(jogo_id, jogador_id, resposta)
     
     def get_comunicados(self) -> list[Comunicado]:
         return self.eventos.get_comunicados()

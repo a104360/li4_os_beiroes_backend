@@ -115,6 +115,28 @@ class SSEventosFacade():
 
         self.eventos[treino_id] = treino
 
+    def registar_resposta_convocatoria(self, jogo_id: str, jogador_id: str, resposta: bool):
+        """
+        Updates the response status of a specific player for a match.
+        Maps to POST /eventos/jogos/<id>/resposta.
+        """
+        # 1. Retrieve the game from the DAO
+        jogo = self.eventos.get(jogo_id)
+        
+        if not isinstance(jogo, Jogo):
+            raise ValueError(f"Evento {jogo_id} não é um Jogo ou não existe.")
+
+        # 2. Check if the player is actually in the convocatoria
+        if jogador_id not in jogo.convocatoria.convocados:
+            raise KeyError(f"Jogador {jogador_id} não foi convocado para este jogo.")
+
+        # 3. Update the state (logic.ss_eventos.evento handles internal dict update)
+        jogo.registar_resposta(jogador_id, resposta)
+
+        # 4. Persist the change back to the database[cite: 1]
+        # This will trigger the EventoDAO to update the 'respostas' table
+        self.eventos[jogo_id] = jogo
+
     # --- Comunicados ---
 
     def get_comunicados(self) -> list[Comunicado]:

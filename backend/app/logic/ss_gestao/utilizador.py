@@ -13,8 +13,13 @@ class Utilizador:
     nome_emergencia:str
     contacto_emergencia:str
 
-    # def validar_password(self,password_hash:bytes) -> bool:
-    #     pass
+    def to_dict(self):
+        d = self.__dict__.copy()
+        if isinstance(d.get('password'), bytes):
+            d['password'] = d['password'].hex()
+        if isinstance(d.get('data_nascimento'), date):
+            d['data_nascimento'] = d['data_nascimento'].isoformat()
+        return d
 
 @dataclass
 class Jogador(Utilizador):

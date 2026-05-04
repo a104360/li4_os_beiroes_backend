@@ -2,6 +2,8 @@
 import os
 from dotenv import load_dotenv
 
+from web_server import WebServer
+
 load_dotenv()
 
 db_config = {
@@ -12,4 +14,7 @@ db_config = {
     "password":os.getenv("DB_PASSWORD"),
 }
 
-print(db_config)
+if __name__ == '__main__':
+    w = WebServer(db_config)
+
+    w.run(port=8080)

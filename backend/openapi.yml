@@ -1,0 +1,224 @@
+openapi: 3.0.0
+info:
+  title: Beirões LN API
+  description: API for managing club personnel, events, match logistics, and transportation.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  # --- Gestão de Utilizadores ---
+  /auth/login:
+    post:
+      summary: Authenticate a user
+      tags: [Gestão]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                contacto: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid credentials
+
+  /jogadores/jogador:
+    post:
+      summary: Register a new player
+      tags: [Gestão]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JogadorInput'
+      responses:
+        '201':
+          description: Player registered successfully
+
+  /jogadores/procurar:
+    get:
+      summary: Find a player by ID
+      tags: [Gestão]
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Player found
+        '404':
+          description: Not found
+
+  # --- Calendário e Eventos ---
+  /eventos:
+    post:
+      summary: Create a new event (Treino or Jogo)
+      tags: [Eventos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tipo: { type: string, enum: [Treino, Jogo] }
+                data_hora: { type: string, format: date-time }
+                local: { type: string }
+                adversario: { type: string, description: "Only for Jogo" }
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                properties:
+                  id: { type: string, format: uuid }
+
+  /comunicados:
+    get:
+      summary: List all official announcements
+      tags: [Eventos]
+      responses:
+        '200':
+          description: Success
+    post:
+      summary: Publish a new announcement
+      tags: [Eventos]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titulo: { type: string }
+                corpo: { type: string }
+      responses:
+        '201':
+          description: Published
+
+  # --- Operações Desportivas ---
+  /eventos/jogos/{id}/convocatoria:
+    post:
+      summary: Set match squad
+      tags: [Operações Desportivas]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                jogadores: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Squad updated
+
+  /eventos/jogos/{id}/resposta:
+    post:
+      summary: Register player response to match call
+      tags: [Operações Desportivas]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                jogador_id: { type: string }
+                resposta: { type: bool }
+      responses:
+        '200':
+          description: Response recorded
+
+  /eventos/treinos/{id}/presencas:
+    post:
+      summary: Record training attendance
+      tags: [Operações Desportivas]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: object
+                properties:
+                  presente: { type: boolean }
+                  nota: { type: string }
+      responses:
+        '200':
+          description: Attendance saved
+
+  # --- Logística ---
+  /boleias:
+    post:
+      summary: Offer a ride
+      tags: [Logística]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                partida: { type: string, format: date-time }
+                viatura_id: { type: string, format: uuid }
+                jogo_id: { type: string, format: uuid }
+                max_lugares: { type: integer }
+      responses:
+        '201':
+          description: Ride created
+
+  /boleias/{id}/reservar:
+    post:
+      summary: Reserve a seat in a ride
+      tags: [Logística]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                user_id: { type: string }
+      responses:
+        '200':
+          description: Seat reserved
+
+components:
+  schemas:
+    JogadorInput:
+      type: object
+      required: [id, nome, contacto, password, data_nascimento, posicao]
+      properties:
+        id: { type: string }
+        nome: { type: string }
+        contacto: { type: string }
+        password: { type: string, format: binary }
+        data_nascimento: { type: string, format: date }
+        posicao: { type: string }
+        nome_emergencia: { type: string }
+        contacto_emergencia: { type: string }
