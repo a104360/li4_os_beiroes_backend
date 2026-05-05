@@ -6,7 +6,7 @@ from utils.utils import utc_now_datetime
 
 @dataclass
 class Comunicado:
-    id: UUID = uuid4()
+    id: str = str(uuid4())
     titulo : str = ""
     data : datetime = utc_now_datetime()
     corpo : str = ""

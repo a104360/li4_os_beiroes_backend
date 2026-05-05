@@ -95,6 +95,7 @@ def seed_database():
         "lugares_totais": 5,
         "proprietario_id": "u3"
     })
+    UI.step("Vehicle registered")
     
     # Offer a ride for the Tortosendo game
     ln.disponibilizar_boleias({

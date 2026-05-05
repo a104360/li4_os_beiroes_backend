@@ -16,29 +16,29 @@ class EventoDAO(AbstractDAO[Evento]):
     def _create_table_if_not_exists(self):
         queries = [
             """CREATE TABLE IF NOT EXISTS eventos (
-                id UUID PRIMARY KEY,
+                id VARCHAR(50) PRIMARY KEY,
                 data_hora TIMESTAMP WITH TIME ZONE NOT NULL,
                 local VARCHAR(255) NOT NULL,
                 estado VARCHAR(50) NOT NULL,
                 tipo VARCHAR(20) NOT NULL
             );""",
             """CREATE TABLE IF NOT EXISTS treinos (
-                id UUID PRIMARY KEY REFERENCES eventos(id) ON DELETE CASCADE,
+                id VARCHAR(50) PRIMARY KEY REFERENCES eventos(id) ON DELETE CASCADE,
                 presencas JSONB NOT NULL DEFAULT '{}'
             );""",
             """CREATE TABLE IF NOT EXISTS convocatorias (
-                id UUID PRIMARY KEY,
+                id VARCHAR(50) PRIMARY KEY,
                 data TIMESTAMP NOT NULL
             );""",
             """CREATE TABLE IF NOT EXISTS jogos (
-                id UUID PRIMARY KEY REFERENCES eventos(id) ON DELETE CASCADE,
+                id VARCHAR(50) PRIMARY KEY REFERENCES eventos(id) ON DELETE CASCADE,
                 adversario VARCHAR(255) NOT NULL,
                 golos_favor INTEGER DEFAULT 0,
                 golos_contra INTEGER DEFAULT 0,
-                id_convocatoria UUID REFERENCES convocatorias(id) ON DELETE SET NULL
+                id_convocatoria VARCHAR(50) REFERENCES convocatorias(id) ON DELETE SET NULL
             );""",
             """CREATE TABLE IF NOT EXISTS respostas (
-                id_convocatoria UUID REFERENCES convocatorias(id) ON DELETE CASCADE,
+                id_convocatoria VARCHAR(50) REFERENCES convocatorias(id) ON DELETE CASCADE,
                 id_jogador VARCHAR(50) REFERENCES utilizadores(id) ON DELETE CASCADE,
                 estado BOOLEAN NOT NULL,
                 PRIMARY KEY (id_convocatoria, id_jogador)

@@ -15,7 +15,7 @@ class ComunicadoDAO(AbstractDAO[Comunicado]):
     def _create_table_if_not_exists(self):
         query = """
             CREATE TABLE IF NOT EXISTS comunicados (
-                id UUID PRIMARY KEY,
+                id VARCHAR(50) PRIMARY KEY,
                 titulo VARCHAR(255) NOT NULL,
                 data TIMESTAMP WITH TIME ZONE NOT NULL,
                 corpo TEXT NOT NULL
@@ -71,7 +71,7 @@ class ComunicadoDAO(AbstractDAO[Comunicado]):
         
         # record[0]: id (UUID/str), record[1]: titulo, record[2]: data, record[3]: corpo
         return Comunicado(
-            id=UUID(str(record[0])) if not isinstance(record[0], UUID) else record[0],
+            id=record[0], # if not isinstance(record[0], str) else record[0],
             titulo=record[1],
             data=record[2],
             corpo=record[3]
