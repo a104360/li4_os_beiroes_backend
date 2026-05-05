@@ -100,7 +100,7 @@ class SSLogisticaFacade:
                           nome_emergencia="", contacto_emergencia="")
         
         try:
-            uid = UUID(data['id'])
+            uid = data['id']
             nova_v = Viatura(
                 id=uid,
                 modelo=data['modelo'], 

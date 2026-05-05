@@ -7,7 +7,7 @@ from utils.ui import UI
 # 1. Configuration
 load_dotenv()
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
+    "host": "localhost",#os.getenv("DB_HOST", "localhost"),
     "port": int(os.getenv("DB_PORT", 5432)),
     "database": os.getenv("DB_NAME", "caderno_quim"),
     "user": os.getenv("DB_USER", "beiroes_admin"),
