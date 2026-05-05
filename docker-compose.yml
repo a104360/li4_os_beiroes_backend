@@ -16,9 +16,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./pgdata:/var/lib/postgresql/data
+      - beiroes_db_data:/var/lib/postgresql/data
       - ./init-multiple-databases.sql:/docker-entrypoint-initdb.d/init-multiple-databases.sql
-
+  
   api:
     build: 
       context: ./backend
@@ -36,3 +36,6 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
     ports:
       - "8080:8080"     
+
+volumes:
+  beiroes_db_data:

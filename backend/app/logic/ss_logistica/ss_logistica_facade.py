@@ -99,13 +99,23 @@ class SSLogisticaFacade:
                           ativo=True, data_nascimento=None, 
                           nome_emergencia="", contacto_emergencia="")
         
-        nova_v = Viatura(
-            id=UUID(data['id']), 
-            modelo=data['modelo'], 
-            matricula=data['matricula'],
-            lugares_totais=int(data['lugares_totais']), 
-            proprietario=owner
-        )
+        try:
+            uid = UUID(data['id'])
+            nova_v = Viatura(
+                id=uid,
+                modelo=data['modelo'], 
+                matricula=data['matricula'],
+                lugares_totais=int(data['lugares_totais']), 
+                proprietario=owner
+            )
+        except Exception as e:
+            nova_v = Viatura(
+                modelo=data['modelo'], 
+                matricula=data['matricula'],
+                lugares_totais=int(data['lugares_totais']), 
+                proprietario=owner
+            )
+
 
         # 1. Persist to Database
         self.boleias.put_viatura(nova_v)

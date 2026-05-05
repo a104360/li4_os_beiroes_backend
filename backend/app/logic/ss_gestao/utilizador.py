@@ -29,5 +29,6 @@ class Jogador(Utilizador):
 class Treinador(Utilizador):
     licenca : date
 
+@dataclass
 class Presidente(Utilizador):
     anos_mandato:int

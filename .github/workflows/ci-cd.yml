@@ -39,3 +39,15 @@ jobs:
 
       - name: Docker Deployment
         run: docker-compose --env-file .env up -d --build
+
+      - name: Database seeding
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: beiroes_admin
+          DB_PASSWORD: ${DB_PASSWORD}
+          DB_NAME: caderno_quim
+          PYTHONPATH: ${{ github.workspace }}/backend/app
+        run: |
+          cd backend/app
+          ../../.venv/bin/python3 populate_database.py
