@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta, date
 from logic.ss_gestao.ss_gestao_facade import SSGestaoFacade
 from logic.ss_eventos.ss_eventos_facade import SSEventosFacade
+from logic.ss_logistica.ss_logistica_facade import SSLogisticaFacade
 from utils.ui import UI
 
 load_dotenv()
@@ -19,6 +20,11 @@ def run_integrated_test():
     UI.banner()
     UI.step("Initializing Subsystems")
     try:
+        try:
+            logisitca = SSLogisticaFacade(DB_CONFIG)
+            logisitca.boleias.clear()
+        except Exception:
+            pass
         gestao = SSGestaoFacade(DB_CONFIG)
         eventos = SSEventosFacade(DB_CONFIG)
         UI.end_step("Subsystems Online.")

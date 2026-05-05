@@ -18,22 +18,22 @@ class BoleiaDAO(AbstractDAO[Boleia]):
     def _create_table_if_not_exists(self):
         queries = [
             """CREATE TABLE IF NOT EXISTS viaturas (
-                id UUID PRIMARY KEY,
+                id VARCHAR(50) PRIMARY KEY,
                 modelo VARCHAR(100) NOT NULL,
                 matricula VARCHAR(20) UNIQUE NOT NULL,
                 lugares_totais INTEGER NOT NULL,
                 id_proprietario VARCHAR(50) REFERENCES utilizadores(id)
             );""",
             """CREATE TABLE IF NOT EXISTS boleias (
-                id UUID PRIMARY KEY,
+                id VARCHAR(50) PRIMARY KEY,
                 partida TIMESTAMP WITH TIME ZONE NOT NULL,
                 lugares_vagos INTEGER NOT NULL,
                 max_lugares INTEGER NOT NULL,
-                id_viatura UUID REFERENCES viaturas(id),
-                id_jogo UUID REFERENCES eventos(id) ON DELETE CASCADE
+                id_viatura VARCHAR(50) REFERENCES viaturas(id),
+                id_jogo VARCHAR(50) REFERENCES eventos(id) ON DELETE CASCADE
             );""",
             """CREATE TABLE IF NOT EXISTS boleia_passageiros (
-                id_boleia UUID REFERENCES boleias(id) ON DELETE CASCADE,
+                id_boleia VARCHAR(50) REFERENCES boleias(id) ON DELETE CASCADE,
                 id_utilizador VARCHAR(50) REFERENCES utilizadores(id) ON DELETE CASCADE,
                 PRIMARY KEY (id_boleia, id_utilizador)
             );"""

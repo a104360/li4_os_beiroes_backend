@@ -18,7 +18,7 @@ class Resposta:
 
 @dataclass
 class Convocatoria:
-   uuid : str = field(default_factory=str(uuid4()))
+   uuid : str = field(default_factory=lambda: str(uuid4()))
    data : datetime = field(default_factory=utc_now_datetime)
    convocados : dict[str,Resposta] = field(default_factory=dict)
 
@@ -27,7 +27,7 @@ class Evento:
     data_hora : datetime
     local : str
     estado : str
-    id : str = field(default_factory=str(uuid4()))
+    id : str = field(default_factory=lambda: str(uuid4()))
 
 @dataclass
 class Treino(Evento):

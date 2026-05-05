@@ -12,7 +12,7 @@ class Viatura:
     matricula:str
     lugares_totais:int
     proprietario : Utilizador = field(default_factory=Utilizador)
-    id:UUID = field(default_factory=uuid4)
+    id:str = field(default_factory=lambda: str(uuid4()))
 
 
 @dataclass
@@ -23,4 +23,4 @@ class Boleia:
     viatura: Viatura = field(default_factory=Viatura)
     passageiros : dict[Utilizador] = field(default_factory=Utilizador)
     jogo:Jogo = field(default_factory=Jogo)
-    id:UUID = field(default_factory=uuid4)
+    id:str = field(default_factory=lambda: str(uuid4()))

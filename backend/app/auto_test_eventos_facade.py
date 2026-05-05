@@ -3,8 +3,9 @@ from dotenv import load_dotenv
 
 import time
 from logic.ss_gestao.ss_gestao_facade import SSGestaoFacade
-from datetime import datetime, timedelta,date
+from logic.ss_logistica.ss_logistica_facade import SSLogisticaFacade
 from logic.ss_eventos.ss_eventos_facade import SSEventosFacade
+from datetime import datetime, timedelta,date
 from utils.ui import UI
 
 load_dotenv()
@@ -25,6 +26,12 @@ def run_integrated_test():
     
     try:
         # Initialize Facades instead of DAOs directly
+        try:
+            logisitca = SSLogisticaFacade(DB_CONFIG)
+            logisitca.boleias.clear()
+        except Exception:
+            pass
+
         gestao = SSGestaoFacade(DB_CONFIG)
         eventos = SSEventosFacade(DB_CONFIG)
         UI.success("Subsystems Synchronized.")
@@ -37,8 +44,8 @@ def run_integrated_test():
     # --- Phase 1: Total System Reset ---[cite: 1, 2]
     # We clear events first because they depend on users (Foreign Keys)
     UI.admin("Maintenance: Performing Full System Wipe...")
-    eventos.eventos.clear()
     eventos.comunicados.clear()
+    eventos.eventos.clear()
     gestao.utilizadores.clear()
     UI.end_step("System Sanitization", "CLEAN")
 
