@@ -94,6 +94,9 @@ class BeiroesLNFacade():
     def consultar_boleias_de_jogo(self, jogo_id: str) -> list[Boleia]:
         return self.logistica.consultar_boleias_de_jogo(jogo_id)
     
+    def consultar_boleias(self) -> list[Boleia]:
+        return self.logistica.consultar_boleias()
+    
     def registar_viatura(self, data: dict):
         self.logistica.registar_viatura(data)
 

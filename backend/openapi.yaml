@@ -291,7 +291,7 @@ paths:
       parameters:
         - name: jogo_id
           in: query
-          required: true
+          required: false
           schema:
             type: string
       responses:

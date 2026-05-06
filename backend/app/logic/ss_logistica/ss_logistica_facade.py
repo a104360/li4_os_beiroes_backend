@@ -89,6 +89,9 @@ class SSLogisticaFacade:
         """Returns all rides associated with a specific match ID[cite: 2]."""
         return [b for b in self.boleias.values() if str(b.jogo.id) == jogo_id]
     
+    def consultar_boleias(self) -> list[Boleia]:
+        return [b for b in self.boleias.values()]
+    
     def registar_viatura(self, data: dict):
         """
         Registers a vehicle and updates both the database and the memory cache.

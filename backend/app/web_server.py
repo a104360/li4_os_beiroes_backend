@@ -139,7 +139,7 @@ class WebServer:
             id_jogo = request.args.get('jogo_id')
 
             if not id_jogo:
-                return jsonify({"Error":"Missing game ID parameter"}),400
+                return jsonify(self.ln.consultar_boleias()),200
 
             return jsonify({"boleias":self.ln.consultar_boleias_de_jogo(id_jogo)}),200
 
