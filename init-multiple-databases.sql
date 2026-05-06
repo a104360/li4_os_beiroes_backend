@@ -1,1 +1,1 @@
-CREATE DATABSE beiroes_test;
+CREATE DATABASE beiroes_test;

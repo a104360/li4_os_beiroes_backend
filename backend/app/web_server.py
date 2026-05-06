@@ -134,6 +134,15 @@ class WebServer:
                 return jsonify({"error": "Invalid year or month format"}), 400
 
         # --- Logística (Boleias) ---
+        @self.app.route('/boleias',methods=['GET'])
+        def get_boleias():
+            id_jogo = request.args.get('jogo_id')
+
+            if not id_jogo:
+                return jsonify({"Error":"Missing game ID parameter"}),400
+
+            return jsonify({"boleias":self.ln.consultar_boleias_de_jogo(id_jogo)}),200
+
         @self.app.route('/boleias', methods=['POST'])
         def criar_boleia():
             boleia_id = self.ln.disponibilizar_boleias(request.json)
@@ -150,6 +159,60 @@ class WebServer:
                 return jsonify({"message": "Reserva efetuada"}), 200
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
+            
+        @self.app.route('/viaturas', methods=['GET'])
+        def get_viaturas():
+            try:
+                # 1. Fetch the raw dictionary of Viaturas from the facade
+                raw_viaturas = self.ln.get_viaturas()
+                
+                # 2. Process each vehicle to ensure it is JSON-serializable
+                cleaned_viaturas = {}
+                for v_id, viatura in raw_viaturas.items():
+                    # Convert the dataclass to a dictionary
+                    v_dict = viatura.to_dict() if hasattr(viatura, 'to_dict') else viatura.__dict__.copy()
+                    
+                    # 3. Specifically clean the owner (proprietario) inside the Viatura
+                    if 'proprietario' in v_dict and v_dict['proprietario']:
+                        owner = v_dict['proprietario']
+                        # If owner is an object, convert to dict; if already dict, copy it
+                        owner_dict = owner.to_dict() if hasattr(owner, 'to_dict') else owner.__dict__.copy()
+                        
+                        # Remove sensitive bytes field from the owner
+                        if 'password' in owner_dict:
+                            del owner_dict['password']
+                        
+                        # Ensure dates are strings
+                        if owner_dict.get('data_nascimento'):
+                            owner_dict['data_nascimento'] = owner_dict['data_nascimento'].isoformat()
+                        
+                        v_dict['proprietario'] = owner_dict
+
+                    cleaned_viaturas[v_id] = v_dict
+
+                return jsonify(cleaned_viaturas), 200
+            except Exception as e:
+                return jsonify({"error": str(e)}), 400
+            
+        @self.app.route('/viaturas',methods=['POST'])
+        def registar_viatura():
+            """
+            Registers a vehicle.
+            Expects JSON: {
+                "id": "uuid-string",
+                "modelo": "Renault Clio",
+                "matricula": "AA-00-BB",
+                "lugares_totais": 5,
+                "proprietario_id": "user-id"
+            }
+            """
+            data = request.json
+            try:
+                self.ln.registar_viatura(data)
+                return jsonify({"message": "Viatura registada com sucesso"}), 201
+            except Exception as e:
+                return jsonify({"error": str(e)}), 400
+
 
     def run(self, host='0.0.0.0', port=5000, debug=True):
         UI.success(f"Flask Web Server starting on {host}:{port}")

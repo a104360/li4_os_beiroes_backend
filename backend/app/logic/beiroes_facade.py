@@ -96,3 +96,6 @@ class BeiroesLNFacade():
     
     def registar_viatura(self, data: dict):
         self.logistica.registar_viatura(data)
+
+    def get_viaturas(self):
+        return self.logistica.get_viaturas()

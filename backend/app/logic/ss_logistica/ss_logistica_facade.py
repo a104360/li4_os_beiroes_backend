@@ -122,3 +122,6 @@ class SSLogisticaFacade:
         
         # 2. Update memory cache for immediate use without reloading[cite: 2]
         self.viatura[str(nova_v.id)] = nova_v
+
+    def get_viaturas(self):
+        return self.boleias.load_viaturas_to_memory()

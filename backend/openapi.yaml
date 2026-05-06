@@ -7,6 +7,8 @@ info:
 servers:
   - url: http://localhost:8080
     description: Docker Local Server
+  - url: https://api.osbeiroes.cc
+    description: Main API Server
 
 paths:
   # --- Gestão de Utilizadores ---
@@ -110,6 +112,8 @@ paths:
       responses:
         '201':
           description: Event created successfully
+        '400':
+          description: Validation error
 
   /comunicados:
     get:
@@ -150,7 +154,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         content:
           application/json:
@@ -176,7 +179,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         content:
           application/json:
@@ -190,6 +192,8 @@ paths:
       responses:
         '200':
           description: Response recorded
+        '400':
+          description: Invalid data
 
   /eventos/treinos/{id}/presencas:
     post:
@@ -202,7 +206,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         content:
           application/json:
@@ -219,7 +222,43 @@ paths:
         '200':
           description: Attendance saved
 
-  # --- Logística (Boleias) ---
+  # --- Logística (Boleias & Viaturas) ---
+  /viaturas:
+    get:
+      summary: List all registered vehicles
+      tags:
+        - Logística
+      responses:
+        '200':
+          description: List of vehicles
+    post:
+      summary: Register a new vehicle
+      tags:
+        - Logística
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, modelo, matricula, lugares_totais, proprietario_id]
+              properties:
+                id:
+                  type: string
+                modelo:
+                  type: string
+                matricula:
+                  type: string
+                lugares_totais:
+                  type: integer
+                proprietario_id:
+                  type: string
+      responses:
+        '201':
+          description: Vehicle registered successfully
+        '400':
+          description: Error registering vehicle
+
   /boleias:
     post:
       summary: Offer a ride
@@ -237,15 +276,29 @@ paths:
                   format: date-time
                 viatura_id:
                   type: string
-                  format: uuid
                 jogo_id:
                   type: string
-                  format: uuid
                 max_lugares:
                   type: integer
       responses:
         '201':
           description: Ride created
+
+    get:
+      summary: Get rides available for a game
+      tags:
+        - Logística
+      parameters:
+        - name: jogo_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Rides retrieved
+        '400':
+          description: Missing game ID parameter
 
   /boleias/{id}/reservar:
     post:
@@ -258,7 +311,6 @@ paths:
           required: true
           schema:
             type: string
-            format: uuid
       requestBody:
         content:
           application/json:
@@ -270,6 +322,10 @@ paths:
       responses:
         '200':
           description: Seat reserved
+        '404':
+          description: User or ride not found
+        '400':
+          description: Error processing reservation
 
 components:
   schemas:

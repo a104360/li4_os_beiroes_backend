@@ -132,23 +132,33 @@ class BoleiaDAO(AbstractDAO[Boleia]):
                 return self._decode_tuple(row, passengers)
         except psycopg2.Error as e:
             raise RuntimeError(e)
-
     def _decode_tuple(self, record, passengers=None) -> Optional[Boleia]:
-        # record mapping: 0:id, 1:partida, 2:lugares_vagos, 3:max_lugares, 4:id_viatura, 5:id_jogo, 
-        # 6:v_modelo, 7:v_matricula, 8:v_lugares, 9:v_prop_id
-        
-        viatura = Viatura(
-            id=record[4], modelo=record[6], matricula=record[7], 
-            lugares_totais=record[8], proprietario=Utilizador(id=record[9], nome="", contacto="", password=b"", 
-                                                            ativo=True, data_nascimento=None, 
-                                                            nome_emergencia="", contacto_emergencia="")
-        )
+        # Check if the record has the joined columns (length 10)
+        # If not (length 6), we only have the IDs and need to handle it
+        has_joined_data = len(record) >= 10
+
+        if has_joined_data:
+            viatura = Viatura(
+                id=record[4], 
+                modelo=record[6], 
+                matricula=record[7], 
+                lugares_totais=record[8], 
+                proprietario=Utilizador(id=record[9], nome="", contacto="", password=b"", 
+                                        ativo=True, data_nascimento=None, 
+                                        nome_emergencia="", contacto_emergencia="")
+            )
+        else:
+            # Fallback: We only have the viatura ID. 
+            # You might want to fetch the full Viatura from memory/DB here
+            viatura = Viatura(id=record[4], modelo="Desconhecido", matricula="??-??-??", 
+                            lugares_totais=0, proprietario=None)
         
         return Boleia(
             id=record[0], partida=record[1], lugares_vagos=record[2], 
             max_lugares=record[3], viatura=viatura, 
             passageiros=passengers or [], 
-            jogo=Jogo(id=record[5], data_hora=None, local="", estado="", adversario="", golos_favor=0, golos_contra=0, convocatoria=None)
+            jogo=Jogo(id=record[5], data_hora=None, local="", estado="", adversario="", 
+                    golos_favor=0, golos_contra=0, convocatoria=None)
         )
 
     def containsValue(self, value: object) -> bool:
