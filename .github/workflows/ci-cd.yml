@@ -2,53 +2,20 @@ name: Beiroes CI/CD
 
 on:
   push:
-    branches: [ main , dev ]
+    branches:
+      - main
+      - dev
 
 jobs:
   deploy:
-    runs-on: self-hosted # Your Raspberry Pi
+    runs-on: self-hosted
+
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Link Environment File
-        run: cp ~/beiroes_configs/.env .env && echo "Link Environment File copied"
+      - name: Make deploy script executable
+        run: chmod +x local_deploy.sh
 
-      - name: Install Dependencies
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install --upgrade pip
-          pip install -r backend/requirements.txt
-
-      - name: Start Database for Testing
-        # This starts only the 'db' service and waits for it to be healthy
-        run: docker-compose up -d db
-
-      - name: Run Internal Tests
-        env:
-          DB_HOST: ${DB_HOST}  # Using IP instead of 'localhost' is often more stable on Pi
-          DB_PORT: 5432
-          DB_USER: beiroes_admin
-          DB_PASSWORD: ${DB_PASSWORD} # Ensure this is the real value from your .env
-          DB_NAME: beiroes_test
-          PYTHONPATH: ${{ github.workspace }}/backend/app
-        run: |
-          cd backend/app
-          export PYTHONPATH = ${{ github.workspace }}/backend/app
-          ../../.venv/bin/python3 auto_test_all.py
-
-      - name: Docker Deployment
-        run: docker-compose --env-file .env up -d --build
-
-      - name: Database seeding
-        env:
-          DB_HOST: ${DB_HOST}
-          DB_PORT: 5432
-          DB_USER: beiroes_admin
-          DB_PASSWORD: ${DB_PASSWORD}
-          DB_NAME: caderno_quim
-          PYTHONPATH: ${{ github.workspace }}/backend/app
-        run: |
-          cd backend/app
-          ../../.venv/bin/python3 populate_database.py
+      - name: Run deployment
+        run: ./local_deploy.sh

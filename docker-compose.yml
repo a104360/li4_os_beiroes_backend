@@ -1,6 +1,8 @@
 version: '3.8'
 services:
   db:
+    env_file:
+      - .env
     image: postgres:15
     container_name: beiroes_db
     restart: always
@@ -20,6 +22,8 @@ services:
       - ./init-multiple-databases.sql:/docker-entrypoint-initdb.d/init-multiple-databases.sql
   
   api:
+    env_file:
+      - .env
     build: 
       context: ./backend
       dockerfile: Dockerfile
