@@ -3,13 +3,31 @@ from flask_cors import CORS
 
 from logic.beiroes_facade import BeiroesLNFacade
 from utils.ui import UI
+from utils.utils import roles_requiered
 import os
-from datetime import datetime
+from dotenv import load_dotenv
+from datetime import datetime,timedelta
+
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+    JWTManager
+    )
+
+load_dotenv()
+
+JWT_CONFIG = {
+    'jwt_secret':os.getenv("JWT_SECRET_KEY")
+} 
 
 class WebServer:
     def __init__(self, db_config: dict):
         self.app = Flask(__name__)
         CORS(self.app)
+        self.app.config["JWT_SECRET_KEY"] = JWT_CONFIG.get('jwt_secret')  # Em produção, usar variável de ambiente
+        self.app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=2)
+        jwt = JWTManager(self.app)
         self.ln = BeiroesLNFacade(db_config)
         self._setup_routes()
 
@@ -18,12 +36,22 @@ class WebServer:
         @self.app.route('/auth/login', methods=['POST'])
         def login():
             data = request.json
-            user = self.ln.autenticar(data.get('contacto'), data.get('password').encode())
+            contacto = data.get('contacto')
+            password = data.get('password')
+            user = self.ln.autenticar(contacto, password.encode())
             if user:
-                return jsonify({"status": "success", "user_id": user.id}), 200
+                role = type(user).__name__
+                access_token = create_access_token(
+                    identity=contacto,
+                    additional_claims={"role":role}
+                    )
+                # return jsonify({"status": "success", "user_id": user.id}), 200
+                return jsonify(access_token=access_token), 200
+            
             return jsonify({"error": "Invalid credentials"}), 401
 
         @self.app.route('/jogadores/jogador', methods=['POST'])
+        @roles_requiered('Presidente','Treinador')
         def registar_jogador():
             # Force 'Jogador' type for this endpoint
             data = request.json
@@ -32,6 +60,7 @@ class WebServer:
             return jsonify({"message": "Jogador registado"}), 201
 
         @self.app.route('/jogadores/procurar', methods=['GET'])
+        @roles_requiered("Treinador","Presidente")
         def procurar_jogador():
             user_id = request.args.get('id')
             user = self.ln.procurar_utilizador(user_id)
@@ -59,6 +88,7 @@ class WebServer:
 
         # --- Calendário e Eventos ---
         @self.app.route('/eventos', methods=['POST'])
+        @roles_requiered("Jogador","Presidente","Treinador")
         def criar_evento():
             try:
                 evento_id = self.ln.criar_evento(request.json)
@@ -67,28 +97,33 @@ class WebServer:
                 return jsonify({"error": str(e)}), 400
 
         @self.app.route('/comunicados', methods=['POST'])
+        @roles_requiered("Presidente","Treinador")
         def publicar_comunicado():
             self.ln.publicar_comunicado(request.json)
             return jsonify({"message": "Comunicado publicado"}), 201
 
         @self.app.route('/comunicados', methods=['GET'])
+        @roles_requiered("Jogador","Presidente","Treinador")
         def listar_comunicados():
             coms = self.ln.get_comunicados()
             return jsonify([c.__dict__ for c in coms]), 200
 
         # --- Operações Desportivas ---
         @self.app.route('/eventos/jogos/<id>/convocatoria', methods=['POST'])
+        @roles_requiered("Treinador")
         def definir_convocatoria(id):
             lista_ids = request.json.get('jogadores', [])
             self.ln.efetuar_convocatoria(id, lista_ids)
             return jsonify({"message": "Convocatória atualizada"}), 200
 
         @self.app.route('/eventos/treinos/<id>/presencas', methods=['POST'])
+        @roles_requiered("Treinador")
         def registar_presencas(id):
             self.ln.registar_presencas(id, request.json)
             return jsonify({"message": "Presenças registadas"}), 200
         
         @self.app.route('/eventos/jogos/<id>/resposta', methods=['POST'])
+        @roles_requiered("Jogador")
         def registar_resposta(id):
             """
             Expects JSON: { "jogador_id": "j01", "resposta": true }
@@ -105,6 +140,7 @@ class WebServer:
             
 
         @self.app.route('/eventos', methods=['GET'])
+        @roles_requiered("Jogador","Treinador","Presidente")
         def listar_eventos():
             """
             GET /eventos?ano=2026&mes=5
@@ -135,6 +171,7 @@ class WebServer:
 
         # --- Logística (Boleias) ---
         @self.app.route('/boleias',methods=['GET'])
+        @roles_requiered("Jogador","Treinador","Presidente")
         def get_boleias():
             id_jogo = request.args.get('jogo_id')
 
@@ -144,11 +181,13 @@ class WebServer:
             return jsonify({"boleias":self.ln.consultar_boleias_de_jogo(id_jogo)}),200
 
         @self.app.route('/boleias', methods=['POST'])
+        @roles_requiered("Jogador","Treinador","Presidente")
         def criar_boleia():
             boleia_id = self.ln.disponibilizar_boleias(request.json)
             return jsonify({"id": boleia_id}), 201
 
         @self.app.route('/boleias/<id>/reservar', methods=['POST'])
+        @roles_requiered("Jogador","Treinador","Presidente")
         def reservar_boleia(id):
             user_id = request.json.get('user_id')
             user = self.ln.procurar_utilizador(user_id)
@@ -161,6 +200,7 @@ class WebServer:
                 return jsonify({"error": str(e)}), 400
             
         @self.app.route('/viaturas', methods=['GET'])
+        @roles_requiered("Jogador","Presidente","Treinador")
         def get_viaturas():
             try:
                 # 1. Fetch the raw dictionary of Viaturas from the facade
@@ -195,6 +235,7 @@ class WebServer:
                 return jsonify({"error": str(e)}), 400
             
         @self.app.route('/viaturas',methods=['POST'])
+        @roles_requiered("Jogador","Treinador","Presidente")
         def registar_viatura():
             """
             Registers a vehicle.

@@ -10,6 +10,10 @@ servers:
   - url: https://api.osbeiroes.cc
     description: Main API Server
 
+# 1. Apply security globally
+security:
+  - bearerAuth: []
+
 paths:
   # --- Gestão de Utilizadores ---
   /auth/login:
@@ -17,6 +21,8 @@ paths:
       summary: Authenticate a user
       tags:
         - Gestão
+      # 2. Override global security for this specific route
+      security: [] 
       requestBody:
         required: true
         content:
@@ -328,6 +334,13 @@ paths:
           description: Error processing reservation
 
 components:
+  # 3. Define the security scheme here
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT  # Optional, but helpful for documentation
+
   schemas:
     JogadorInput:
       type: object
