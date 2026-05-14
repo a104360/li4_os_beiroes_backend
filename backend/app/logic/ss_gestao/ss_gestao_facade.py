@@ -64,3 +64,7 @@ class SSGestaoFacade:
         if user:
             user.ativo = False
             self.utilizadores[user_id] = user
+
+    def get_all_utilizadores(self):
+        return self.utilizadores.values()
+        

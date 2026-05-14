@@ -37,6 +37,9 @@ class BeiroesLNFacade():
     
     def desativar_utilizador(self, user_id: str):
         self.gestao.desativar_utilizador(user_id)
+
+    def get_all_utilizadores(self):
+        return self.gestao.get_all_utilizadores()
     
 
     # ------------------ Eventos ------------------

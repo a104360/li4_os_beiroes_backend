@@ -86,6 +86,36 @@ class WebServer:
                 
             return jsonify({"error": "Not found"}), 404
 
+        @self.app.route("/jogadores",methods=['GET'])
+        @roles_requiered("Presidente","Treinador")
+        def listar_todos_utilizadores():
+            """
+            Retrieves all users from the database.
+            """
+            try:
+                # 1. Fetch all user objects from the facade
+                # The facade's 'utilizadores' is a DAO whose .values() returns all records
+                utilizadores = self.ln.gestao.utilizadores.values() 
+                
+                output = []
+                for user in utilizadores:
+                    # 2. Use the built-in to_dict() method to handle bytes and dates
+                    user_data = user.to_dict()
+                    
+                    # 3. Security: Remove the password field before sending to client
+                    if 'password' in user_data:
+                        del user_data['password']
+                    
+                    # 4. Add the specific type for clarity in the frontend
+                    user_data['tipo'] = type(user).__name__
+                    
+                    output.append(user_data)
+
+                return jsonify(output), 200
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+        
+
         # --- Calendário e Eventos ---
         @self.app.route('/eventos', methods=['POST'])
         @roles_requiered("Jogador","Presidente","Treinador")

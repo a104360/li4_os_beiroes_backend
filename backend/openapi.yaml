@@ -40,6 +40,15 @@ paths:
         '401':
           description: Invalid credentials
 
+  /jogadores:
+    get:
+      summary: Get all players
+      tags:
+        - Gestão
+      responses:
+        '200':
+          description: Players found
+
   /jogadores/jogador:
     post:
       summary: Register a new player
