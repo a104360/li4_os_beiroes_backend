@@ -73,7 +73,7 @@ class BeiroesLNFacade():
         return self.eventos.get_comunicados()
     
     def publicar_comunicado(self, dados: dict):
-        self.eventos.publicar_comunicado(dados)
+        return self.eventos.publicar_comunicado(dados)
     
 
     # ------------------ Boleias (Logística) ------------------

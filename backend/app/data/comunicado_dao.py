@@ -1,6 +1,6 @@
 import psycopg2
 from psycopg2 import sql
-from uuid import UUID
+from uuid import UUID,uuid4
 from datetime import datetime
 from typing import Optional
 from data.abstract_dao import AbstractDAO
@@ -53,7 +53,8 @@ class ComunicadoDAO(AbstractDAO[Comunicado]):
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute(query, (
-                    str(value.id), 
+                    # str(value.id), 
+                    str(uuid4()),
                     value.titulo, 
                     value.data, 
                     value.corpo

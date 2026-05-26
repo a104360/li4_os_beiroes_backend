@@ -53,8 +53,10 @@ class BoleiaDAO(AbstractDAO[Boleia]):
         """Loads all Viaturas into a dictionary keyed by their ID string."""
         viaturas = {}
         query = """
-            SELECT v.*, u.id FROM viaturas v 
-            JOIN utilizadores u ON v.id_proprietario = u.id
+            SELECT v.*,u.nome 
+            FROM viaturas v 
+            JOIN utilizadores u 
+            ON v.id_proprietario = u.id;
         """
         try:
             with self.connection.cursor() as cursor:
@@ -62,7 +64,7 @@ class BoleiaDAO(AbstractDAO[Boleia]):
                 for row in cursor.fetchall():
                     # Note: This assumes you have a way to reconstruct the owner Utilizador
                     # For simplicity, we create a placeholder Utilizador with just the ID
-                    owner = Utilizador(id=row[4], nome="", contacto="", password=b"", 
+                    owner = Utilizador(id=row[4], nome=row[5], contacto="", password=b"", 
                                       ativo=True, data_nascimento=None, 
                                       nome_emergencia="", contacto_emergencia="")
                     v = Viatura(id=row[0], modelo=row[1], matricula=row[2], 
@@ -111,9 +113,10 @@ class BoleiaDAO(AbstractDAO[Boleia]):
 
     def get(self, key: str) -> Optional[Boleia]:
         query = """
-            SELECT b.*, v.modelo, v.matricula, v.lugares_totais, v.id_proprietario
+            SELECT b.*, v.modelo, v.matricula, v.lugares_totais, v.id_proprietario,u.nome
             FROM boleias b
             JOIN viaturas v ON b.id_viatura = v.id
+            JOIN utilizadores u ON u.id = v.id_proprietario
             WHERE b.id = %s
         """
         try:
@@ -143,15 +146,16 @@ class BoleiaDAO(AbstractDAO[Boleia]):
                 modelo=record[6], 
                 matricula=record[7], 
                 lugares_totais=record[8], 
-                proprietario=Utilizador(id=record[9], nome="", contacto="", password=b"", 
+                proprietario=Utilizador(id=record[9], nome=record[10], contacto="", password=b"", 
                                         ativo=True, data_nascimento=None, 
                                         nome_emergencia="", contacto_emergencia="")
             )
         else:
             # Fallback: We only have the viatura ID. 
             # You might want to fetch the full Viatura from memory/DB here
-            viatura = Viatura(id=record[4], modelo="Desconhecido", matricula="??-??-??", 
-                            lugares_totais=0, proprietario=None)
+            # viatura = Viatura(id=record[4], modelo="Desconhecido", matricula="??-??-??", 
+            #                 lugares_totais=0, proprietario=None)
+            viatura = self.load_viaturas_to_memory().get(record[4])
         
         return Boleia(
             id=record[0], partida=record[1], lugares_vagos=record[2], 
@@ -223,3 +227,46 @@ class BoleiaDAO(AbstractDAO[Boleia]):
         except psycopg2.Error as e:
             self.connection.rollback()
             raise RuntimeError(f"Failed to clear logistics data: {e}")
+        
+
+    def get_all(self) -> list[Boleia]:
+        # Query that fetches the ride along with its corresponding vehicle and owner details
+        query = """
+            SELECT b.*, v.modelo, v.matricula, v.lugares_totais, v.id_proprietario,u.nome
+            FROM boleias b
+            JOIN viaturas v ON b.id_viatura = v.id
+            JOIN utilizadores u ON u.id = v.id_proprietario
+            WHERE b.partida >= NOW();
+        """
+        boleias_list = []
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                
+                for row in rows:
+                    boleia_id = row[0] # b.id
+                    
+                    # Fetch all passengers registered for this specific ride
+                    cursor.execute(
+                        "SELECT bp.id_utilizador,u.nome FROM boleia_passageiros bp JOIN utilizadores u ON bp.id_utilizador = u.id WHERE id_boleia = %s", 
+                        (boleia_id,)
+                    )
+                    passengers = [
+                        Utilizador(
+                            id=r[0], nome=r[1], contacto="", password=b"", 
+                            ativo=True, data_nascimento=None, 
+                            nome_emergencia="", contacto_emergencia=""
+                        ) 
+                        for r in cursor.fetchall()
+                    ]
+                    
+                    # Safely decode the tuple row into a fully populated Boleia object
+                    boleia_obj = self._decode_tuple(row, passengers)
+                    if boleia_obj:
+                        boleias_list.append(boleia_obj)
+                        
+        except psycopg2.Error as e:
+            raise RuntimeError(f"Failed to get the future rides: {e}")
+        
+        return boleias_list

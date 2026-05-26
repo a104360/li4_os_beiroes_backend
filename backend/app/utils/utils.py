@@ -19,7 +19,7 @@ def roles_requiered(*roles):
             if claims.get('role') in roles:
                 return fn(*args,**kwargs)
             else:
-                return jsonify(msg="Access Forbidden: Insufficient permissions")
+                return jsonify(msg="Access Forbidden: Insufficient permissions"),403
             
         return decorator
     return wrapper

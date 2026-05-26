@@ -51,7 +51,7 @@ class WebServer:
             return jsonify({"error": "Invalid credentials"}), 401
 
         @self.app.route('/jogadores/jogador', methods=['POST'])
-        @roles_requiered('Presidente','Treinador')
+        @roles_requiered('Presidente','Treinador','Jogador')
         def registar_jogador():
             # Force 'Jogador' type for this endpoint
             data = request.json
@@ -60,7 +60,7 @@ class WebServer:
             return jsonify({"message": "Jogador registado"}), 201
 
         @self.app.route('/jogadores/procurar', methods=['GET'])
-        @roles_requiered("Treinador","Presidente")
+        @roles_requiered("Treinador","Presidente",'Jogador')
         def procurar_jogador():
             user_id = request.args.get('id')
             user = self.ln.procurar_utilizador(user_id)
@@ -87,7 +87,7 @@ class WebServer:
             return jsonify({"error": "Not found"}), 404
 
         @self.app.route("/jogadores",methods=['GET'])
-        @roles_requiered("Presidente","Treinador")
+        @roles_requiered("Presidente","Treinador","Jogador")
         def listar_todos_utilizadores():
             """
             Retrieves all users from the database.
@@ -200,15 +200,55 @@ class WebServer:
                 return jsonify({"error": "Invalid year or month format"}), 400
 
         # --- Logística (Boleias) ---
-        @self.app.route('/boleias',methods=['GET'])
-        @roles_requiered("Jogador","Treinador","Presidente")
+        @self.app.route('/boleias', methods=['GET'])
+        @roles_requiered("Jogador", "Treinador", "Presidente")
         def get_boleias():
             id_jogo = request.args.get('jogo_id')
 
             if not id_jogo:
-                return jsonify(self.ln.consultar_boleias()),200
+                boleias_list = self.ln.consultar_boleias()
+                print(boleias_list)
+            else:
+                boleias_list = self.ln.consultar_boleias_de_jogo(id_jogo)
 
-            return jsonify({"boleias":self.ln.consultar_boleias_de_jogo(id_jogo)}),200
+            # Convert domain models to JSON-serializable dictionaries
+            cleaned_boleias = []
+            for b in boleias_list:
+                b_dict = b.__dict__.copy()
+                b_dict['id'] = str(b.id)
+                if b.partida:
+                    b_dict['partida'] = b.partida.isoformat()
+                
+                # Serialize Game (Jogo)
+                if b.jogo:
+                    b_dict['jogo'] = b.jogo.__dict__.copy()
+                    b_dict['jogo']['id'] = str(b.jogo.id)
+                
+                # Serialize Vehicle (Viatura) and scrub Owner password
+                if b.viatura:
+                    v_dict = b.viatura.to_dict() if hasattr(b.viatura, 'to_dict') else b.viatura.__dict__.copy()
+                    if 'proprietario' in v_dict and v_dict['proprietario']:
+                        owner = v_dict['proprietario']
+                        owner_dict = owner.to_dict() if hasattr(owner, 'to_dict') else owner.__dict__.copy()
+                        if 'password' in owner_dict:
+                            del owner_dict['password']
+                        if owner_dict.get('data_nascimento'):
+                            owner_dict['data_nascimento'] = owner_dict['data_nascimento'].isoformat()
+                        v_dict['proprietario'] = owner_dict
+                    b_dict['viatura'] = v_dict
+
+                # Serialize Passengers list and scrub passwords
+                cleaned_passengers = []
+                for passenger in b.passageiros:
+                    p_dict = passenger.to_dict() if hasattr(passenger, 'to_dict') else passenger.__dict__.copy()
+                    if 'password' in p_dict:
+                        del p_dict['password']
+                    cleaned_passengers.append(p_dict)
+                b_dict['passageiros'] = cleaned_passengers
+
+                cleaned_boleias.append(b_dict)
+
+            return jsonify({"boleias": cleaned_boleias}), 200
 
         @self.app.route('/boleias', methods=['POST'])
         @roles_requiered("Jogador","Treinador","Presidente")
@@ -230,30 +270,34 @@ class WebServer:
                 return jsonify({"error": str(e)}), 400
             
         @self.app.route('/viaturas', methods=['GET'])
-        @roles_requiered("Jogador","Presidente","Treinador")
+        @roles_requiered("Jogador", "Treinador", "Presidente")
         def get_viaturas():
             try:
-                # 1. Fetch the raw dictionary of Viaturas from the facade
-                raw_viaturas = self.ln.get_viaturas()
-                
-                # 2. Process each vehicle to ensure it is JSON-serializable
+                # Obter o dicionário de viaturas retornado pela lógica de negócio
+                viaturas_dict = self.ln.get_viaturas()
                 cleaned_viaturas = {}
-                for v_id, viatura in raw_viaturas.items():
-                    # Convert the dataclass to a dictionary
-                    v_dict = viatura.to_dict() if hasattr(viatura, 'to_dict') else viatura.__dict__.copy()
-                    
-                    # 3. Specifically clean the owner (proprietario) inside the Viatura
-                    if 'proprietario' in v_dict and v_dict['proprietario']:
-                        owner = v_dict['proprietario']
-                        # If owner is an object, convert to dict; if already dict, copy it
-                        owner_dict = owner.to_dict() if hasattr(owner, 'to_dict') else owner.__dict__.copy()
+
+                for v_id, viatura_obj in viaturas_dict.items():
+                    # 1. Converter o objeto Viatura principal para dicionário
+                    if hasattr(viatura_obj, 'to_dict'):
+                        v_dict = viatura_obj.to_dict()
+                    else:
+                        v_dict = viatura_obj.__dict__.copy()
+
+                    # 2. Tratar o objeto aninhado 'proprietario' (Utilizador)
+                    proprietario_obj = v_dict.get('proprietario')
+                    if proprietario_obj:
+                        if hasattr(proprietario_obj, 'to_dict'):
+                            owner_dict = proprietario_obj.to_dict()
+                        else:
+                            owner_dict = proprietario_obj.__dict__.copy()
                         
-                        # Remove sensitive bytes field from the owner
+                        # Remover a password em bytes para evitar o erro de serialização JSON
                         if 'password' in owner_dict:
                             del owner_dict['password']
                         
-                        # Ensure dates are strings
-                        if owner_dict.get('data_nascimento'):
+                        # Garantir que datas de nascimento não partem o JSON (caso existam)
+                        if owner_dict.get('data_nascimento') and hasattr(owner_dict['data_nascimento'], 'isoformat'):
                             owner_dict['data_nascimento'] = owner_dict['data_nascimento'].isoformat()
                         
                         v_dict['proprietario'] = owner_dict

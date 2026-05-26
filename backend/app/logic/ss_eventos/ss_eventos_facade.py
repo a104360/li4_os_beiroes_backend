@@ -153,20 +153,24 @@ class SSEventosFacade():
         return self.comunicados.values()
 
     def publicar_comunicado(self,dados:dict):
-        titulo=dados.get('titulo',""),
-        data=datetime.fromisoformat(dados.get('data',utc_now_iso())),
-        corpo=dados.get('corpo',"")
+        try:
+            titulo=dados.get('titulo',""),
+            data=datetime.fromisoformat(dados.get('data',utc_now_iso())),
+            corpo=dados.get('corpo',"")
 
-        if titulo == "":
-            raise ValueError(f"Titulo em falta")
+            if titulo == "":
+                raise ValueError(f"Titulo em falta")
 
-        if corpo == "":
-            raise ValueError(f"Corpo do comunicado em falta")
+            if corpo == "":
+                raise ValueError(f"Corpo do comunicado em falta")
 
-        p = Comunicado(
-            titulo=titulo,
-            data=data,
-            corpo=corpo,
-        )
+            p = Comunicado(
+                titulo=titulo,
+                data=data,
+                corpo=corpo,
+            )
 
-        self.comunicados.put(p.id,p)
+            self.comunicados.put(p.id,p)
+            return True
+        except Exception as e:
+            print(e)

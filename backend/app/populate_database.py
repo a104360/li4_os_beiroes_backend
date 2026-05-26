@@ -14,25 +14,15 @@ DB_CONFIG = {
     "password": os.getenv("DB_PASSWORD")
 }
 
-def seed_database():
-    UI.banner()
-    UI.step("Initializing Seeding Process...")
-    
-    try:
-        ln = BeiroesLNFacade(DB_CONFIG)
-        UI.success("Connected to Subsystems.")
-    except Exception as e:
-        UI.setup_error(f"Connection failed: {e}")
-        return
-
-    # --- Phase 1: Reset (Optional) ---
+def clear_current_database(ln : BeiroesLNFacade):
     UI.warn("Clearing existing data for a clean seed...")
     ln.logistica.boleias.clear()
     ln.eventos.eventos.clear()
     ln.eventos.comunicados.clear()
     ln.gestao.utilizadores.clear()
 
-    # --- Phase 2: Users (Gestão) ---
+
+def seed_users(ln:BeiroesLNFacade):
     UI.sys("Seeding Users...")
     users = [
         {"id": "u1", "nome": "Quim Barrela", "contacto": "910000001", "password": b"quim123", "tipo": "Presidente", "data_nascimento": "1975-06-15", "anos_mandato": 4},
@@ -49,7 +39,8 @@ def seed_database():
         ln.registar_utilizador(u)
         UI.sub_user(f"Seeded: {u['nome']}")
 
-    # --- Phase 3: Events (Calendário) ---
+
+def seed_calendar(ln : BeiroesLNFacade):
     UI.sys("Seeding Events...")
     # Training
     t_id = ln.criar_evento({
@@ -68,12 +59,15 @@ def seed_database():
     
     g2_id = ln.criar_evento({
         "tipo": "Jogo",
-        "data_hora": "2026-04-28T15:00:00",
+        "data_hora": "2026-05-28T15:00:00",
         "local": "Estádio Municipal do Tortosendo",
         "adversario": "CF Tortosendo"
     })
 
-    # --- Phase 4: Convocatórias & Respostas ---
+    return t_id,g1_id,g2_id
+
+
+def seed_convocatorias(ln : BeiroesLNFacade,g1_id:str):
     UI.sys("Seeding Convocatórias...")
     # Squad for Game 1
     squad_ids = ["u3", "j2", "j4"]
@@ -84,7 +78,7 @@ def seed_database():
     
     UI.sub_info(f"Convocatória issued for Game {g1_id}")
 
-    # --- Phase 5: Logistics (Boleias) ---
+def seed_logistics(ln:BeiroesLNFacade,g2_id):
     UI.sys("Seeding Logistics...")
     # Register the vehicle first
     viatura_id = "v1"
@@ -106,7 +100,8 @@ def seed_database():
     })
     UI.sub_sys("Boleia created for Game 2.")
 
-    # --- Phase 6: Comunicados ---
+
+def seed_comunicados(ln:BeiroesLNFacade):
     UI.sys("Seeding Comunicados...")
     coms = [
         {"titulo": "Inscrições na Associação", "corpo": "Prazo renovação: 30 de Abril."},
@@ -114,10 +109,42 @@ def seed_database():
         {"titulo": "Parabéns pela Vitória!", "corpo": "Cozido domingo na sede."}
     ]
     for c in coms:
-        ln.publicar_comunicado(c)
+        res = ln.publicar_comunicado(c)
+        if res: UI.step(f"Published {c.get('titulo')}","OK")
+        else: UI.step(f"Published {c.get('titulo')}","ERROR",UI.RED)
     
     UI.success("Database Seeding Complete!")
     UI.menu_exit()
+
+
+def seed_database():
+    UI.banner()
+    UI.step("Initializing Seeding Process...")
+    
+    try:
+        ln = BeiroesLNFacade(DB_CONFIG)
+        UI.success("Connected to Subsystems.")
+    except Exception as e:
+        UI.setup_error(f"Connection failed: {e}")
+        return
+
+    # --- Phase 1: Reset (Optional) ---
+    clear_current_database(ln)
+
+    # --- Phase 2: Users (Gestão) ---
+    seed_users(ln)
+
+    # --- Phase 3: Events (Calendário) ---
+    t_id,g1_id,g2_id = seed_calendar(ln)
+
+    # --- Phase 4: Convocatórias & Respostas ---
+    seed_convocatorias(ln=ln,g1_id=g1_id)
+
+    # --- Phase 5: Logistics (Boleias) ---
+    seed_logistics(ln,g2_id=g2_id)
+
+    # --- Phase 6: Comunicados ---
+    seed_comunicados(ln)
 
 if __name__ == "__main__":
     seed_database()

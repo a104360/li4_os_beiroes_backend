@@ -87,10 +87,21 @@ class SSLogisticaFacade:
 
     def consultar_boleias_de_jogo(self, jogo_id: str) -> list[Boleia]:
         """Returns all rides associated with a specific match ID[cite: 2]."""
-        return [b for b in self.boleias.values() if str(b.jogo.id) == jogo_id]
+        # return [b for b in self.boleias.values() if str(b.jogo.id) == jogo_id]
+        b = self.boleias.get_all()
+        return list(filter((lambda x:x.jogo.id == jogo_id),b))
     
     def consultar_boleias(self) -> list[Boleia]:
-        return [b for b in self.boleias.values()]
+        # values: list[Boleia] = #[b for b in self.boleias.values()]
+        # for ride in values:
+        #     v_id = ride.viatura.id
+        #     # Retrieve the cached viatura object which contains the proper data
+        #     cached_viatura = self.viatura.get(v_id)
+        #     if cached_viatura:
+        #         ride.viatura = cached_viatura
+        # return values
+        return self.boleias.get_all()
+
     
     def registar_viatura(self, data: dict):
         """
