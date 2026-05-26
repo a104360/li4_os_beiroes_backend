@@ -105,3 +105,6 @@ class BeiroesLNFacade():
 
     def get_viaturas(self):
         return self.logistica.get_viaturas()
+
+    def remover_viatura(self, id_viatura: str):
+        self.logistica.remover_viatura(id_viatura)

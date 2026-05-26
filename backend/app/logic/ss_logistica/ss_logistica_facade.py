@@ -139,3 +139,12 @@ class SSLogisticaFacade:
 
     def get_viaturas(self):
         return self.boleias.load_viaturas_to_memory()
+    
+    def remover_viatura(self, id_viatura: str):
+        """Remove a viatura da base de dados e limpa o cache em memória."""
+        # 1. Remover da base de dados (trata cascata das boleias)
+        self.boleias.delete_viatura(id_viatura)
+        
+        # 2. Remover do cache de memória, se existir
+        if id_viatura in self.viatura:
+            del self.viatura[id_viatura]

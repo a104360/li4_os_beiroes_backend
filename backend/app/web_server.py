@@ -328,6 +328,18 @@ class WebServer:
             except Exception as e:
                 return jsonify({"error": str(e)}), 400
 
+        @self.app.route('/viaturas', methods=['DELETE'])
+        @roles_requiered("Jogador", "Presidente", "Treinador")
+        def apagar_viatura():
+            id_viatura = request.args.get('viatura')
+            if not id_viatura:
+                return jsonify({"error": "Parâmetro 'viatura' (ID) é obrigatório."}), 400
+                
+            try:
+                self.ln.remover_viatura(id_viatura)
+                return jsonify({"message": "Viatura e boleias associadas removidas com sucesso"}), 200
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
 
     def run(self, host='0.0.0.0', port=5000, debug=True):
         UI.success(f"Flask Web Server starting on {host}:{port}")

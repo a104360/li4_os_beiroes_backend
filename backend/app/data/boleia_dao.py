@@ -270,3 +270,31 @@ class BoleiaDAO(AbstractDAO[Boleia]):
             raise RuntimeError(f"Failed to get the future rides: {e}")
         
         return boleias_list
+    
+    def delete_viatura(self, id_viatura: str):
+        """
+        Remove uma viatura e todas as boleias/passageiros associados a ela.
+        """
+        try:
+            with self.connection.cursor() as cursor:
+                # 1. Obter os IDs das boleias que usam esta viatura
+                cursor.execute("SELECT id FROM boleias WHERE id_viatura = %s", (id_viatura,))
+                boleia_ids = [row[0] for row in cursor.fetchall()]
+
+                if boleia_ids:
+                    # 2. Remover os passageiros dessas boleias
+                    cursor.execute(
+                        sql.SQL("DELETE FROM boleia_passageiros WHERE id_boleia IN ({})").format(
+                            sql.SQL(', ').join(sql.Literal(bid) for bid in boleia_ids)
+                        )
+                    )
+                    # 3. Remover as boleias
+                    cursor.execute("DELETE FROM boleias WHERE id_viatura = %s", (id_viatura,))
+
+                # 4. Remover a viatura
+                cursor.execute("DELETE FROM viaturas WHERE id = %s", (id_viatura,))
+                
+            self.connection.commit()
+        except psycopg2.Error as e:
+            self.connection.rollback()
+            raise RuntimeError(f"Erro ao remover viatura e dependências: {e}")
