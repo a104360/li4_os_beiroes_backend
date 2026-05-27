@@ -108,3 +108,6 @@ class BeiroesLNFacade():
 
     def remover_viatura(self, id_viatura: str):
         self.logistica.remover_viatura(id_viatura)
+
+    def cancelar_boleia(self, boleia_id: str):
+        self.logistica.cancelar_boleia(boleia_id)

@@ -340,6 +340,21 @@ class WebServer:
                 return jsonify({"message": "Viatura e boleias associadas removidas com sucesso"}), 200
             except Exception as e:
                 return jsonify({"error": str(e)}), 500
+            
+        @self.app.route('/boleias/<id>', methods=['DELETE'])
+        @roles_requiered("Jogador", "Treinador", "Presidente")
+        def cancelar_boleia(id):
+            """
+            DELETE /boleias/<id>
+            Cancels a ride and automatically cascades passenger deletions.
+            """
+            try:
+                self.ln.cancelar_boleia(id)
+                return jsonify({"message": "Boleia cancelada com sucesso"}), 200
+            except KeyError as e:
+                return jsonify({"error": str(e)}), 404
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
 
     def run(self, host='0.0.0.0', port=5000, debug=True):
         UI.success(f"Flask Web Server starting on {host}:{port}")

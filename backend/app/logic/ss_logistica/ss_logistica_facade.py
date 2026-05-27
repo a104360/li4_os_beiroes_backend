@@ -104,6 +104,12 @@ class SSLogisticaFacade:
         #         ride.viatura = cached_viatura
         # return values
         return self.boleias.get_all()
+    
+    def cancelar_boleia(self, boleia_id: str):
+        """Removes a ride from the database. Database ON DELETE CASCADE clears passengers automatically."""
+        if boleia_id not in self.boleias:
+            raise KeyError(f"Boleia {boleia_id} não encontrada.")
+        del self.boleias[boleia_id] # Triggers AbstractDAO __delitem__
 
     
     def registar_viatura(self, data: dict):
