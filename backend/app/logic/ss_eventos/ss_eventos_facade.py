@@ -50,27 +50,37 @@ class SSEventosFacade():
         return str(evento.id)
 
     def editar_evento(self, evento_id: str, data: dict):
+        """
+        Atualiza os dados de um evento existente.
+        Expects data: {'data': iso_str, 'hora': str, 'local': str, 'estado': str, 'adversario': str}
+        """
+        from datetime import datetime, time
+        from uuid import UUID
+
+        # 1. Recuperar o evento existente através do DAO
         evento = self.eventos.get(evento_id)
         if not evento:
             raise KeyError(f"Evento {evento_id} não encontrado.")
 
-        # Update common fields
-        if 'data_hora' in data:
-            evento.data_hora = datetime.fromisoformat(data['data_hora'])
+        # 2. Atualizar os campos comuns a Treinos e Jogos
+        if 'data' in data and 'hora' in data:
+            data_obj = datetime.fromisoformat(data['data']).date()
+            hora_obj = time.fromisoformat(data['hora'])
+            evento.data_hora = datetime.combine(data_obj, hora_obj)
+        
         if 'local' in data:
             evento.local = data['local']
+            
         if 'estado' in data:
             evento.estado = data['estado']
 
-        # Update specific fields based on class type[cite: 2]
+        # 3. Se for um Jogo, atualizar também os atributos específicos do Jogo
+        from logic.ss_eventos.evento import Jogo
         if isinstance(evento, Jogo):
             if 'adversario' in data:
                 evento.adversario = data['adversario']
-            if 'golos_favor' in data:
-                evento.golos_favor = int(data['golos_favor'])
-            if 'golos_contra' in data:
-                evento.golos_contra = int(data['golos_contra'])
 
+        # 4. Persistir a alteração de volta na Base de Dados usando o AbstractDAO
         self.eventos[evento_id] = evento
 
     def cancelar_evento(self, evento_id: str):
