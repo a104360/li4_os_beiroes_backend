@@ -73,8 +73,46 @@ class BoleiaDAO(AbstractDAO[Boleia]):
         except psycopg2.Error as e:
             raise RuntimeError(f"Error loading viaturas: {e}")
         return viaturas
+    
+    def get_viatura(self, id_viatura: str) -> Optional[Viatura]:
+        """Procura e devolve uma Viatura específica diretamente da base de dados pelo seu ID."""
+        query = """
+            SELECT v.*, u.nome, u.contacto 
+            FROM viaturas v 
+            JOIN utilizadores u ON v.id_proprietario = u.id
+            WHERE v.id = %s
+        """
+        try:
+            with self.connection.cursor() as cursor:
+                cursor.execute(query, (id_viatura,))
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                
+                # Reconstrói o proprietário (Utilizador) com os dados reais vindos da BD
+                owner = Utilizador(
+                    id=row[4], 
+                    nome=row[5], 
+                    contacto=row[6], 
+                    password=b"", 
+                    ativo=True, 
+                    data_nascimento=None, 
+                    nome_emergencia="", 
+                    contacto_emergencia=""
+                )
+                
+                # Reconstrói e devolve o objeto Viatura
+                return Viatura(
+                    id=row[0], 
+                    modelo=row[1], 
+                    matricula=row[2], 
+                    lugares_totais=row[3], 
+                    proprietario=owner
+                )
+        except psycopg2.Error as e:
+            raise RuntimeError(f"Error fetching viatura {id_viatura}: {e}")
 
-    # --- Standard DAO Methods ---
+        # --- Standard DAO Methods ---
 
     def put(self, key: str, value: Boleia) -> Optional[Boleia]:
         old_value = self.get(key)

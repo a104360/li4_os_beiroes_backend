@@ -19,7 +19,10 @@ class SSLogisticaFacade:
         """
         v_id = data.get('viatura_id')
         if v_id not in self.viatura:
-            raise KeyError(f"Viatura {v_id} não encontrada na memória.")
+            # v_id = self.boleias.get_viatura(v_id)
+            self.viatura = self.boleias.load_viaturas_to_memory()
+            if v_id not in self.viatura:
+                raise KeyError(f"Viatura {v_id} não encontrada na memória.")
 
         viatura = self.viatura[v_id]
         # Max places cannot exceed vehicle capacity
